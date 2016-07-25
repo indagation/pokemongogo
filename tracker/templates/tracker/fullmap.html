@@ -10,18 +10,13 @@
         <div id='map-canvas' style="height:500px;width:100%;"></div>
         <div>
           <div>
-          {% if login_status == True %}
-              It looks like you are logged in.
-          {% else%}
-              It looks like you are NOT logged in. Refresh the page or try and change your credentials.
-          {% endif %}
-          </div>
-          <div>
-          {% if login_status == True %}
-              Your location is as follows {{ trainer.latitude }}, {{ trainer.longitude }}, access_token: {{ trainer.access_token }}
-          {% else%}
-              It looks like you are NOT logged in. Refresh the page or try and change your credentials.
-          {% endif %}
+            {% if login_status == True %}
+                <div>It looks like you are logged in.</div>
+                <div>Your location is as follows {{ trainer.latitude }}, {{ trainer.longitude }}</div>
+                <div>You should be seeing all of the rare pokemon between {{ trainer.min_latitude }} and {{ trainer.max_latitude }} latitude, {{ trainer.min_longitude }} and {{ trainer.max_longitude }} longitude.</div>
+            {% else%}
+                It looks like you are NOT logged in. Refresh the page or try and change your credentials.
+            {% endif %}
           </div>
           <div>
             <a href="/tracker/scan/?step=6" target="_blank">Scan for more pokemon.</a>

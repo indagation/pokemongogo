@@ -425,7 +425,6 @@ def get_access_token(service, username, password):
     global global_token
     if global_token is None:
         if service == 'ptc':
-
             global_token = login_ptc(username, password)
         else:
             global_token = login_google(username, password)

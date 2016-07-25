@@ -9,8 +9,10 @@ import html
 
 def get_trainer_access_token(trainer):
     access_token = get_access_token(trainer.login_type, trainer.username, trainer.password)
-    trainer.access_token = access_token
-    trainer.save()
+    if access_token is not None:
+        print 'Access token received: {}'.format(access_token)
+        trainer.access_token = access_token
+        trainer.save()
     return access_token
 
 def attempt_login(current_user):
@@ -20,27 +22,30 @@ def attempt_login(current_user):
 
         if access_token is not None:
             api_endpoint = get_api_endpoint(trainer.login_type, access_token)
-            trainer.api_endpoint = api_endpoint
-            trainer.save()
+            if api_endpoint is not None:
+                print 'Api endpoint received: {}'.format(access_token)
 
-            profile_response = retrying_get_profile(trainer.login_type, trainer.access_token, trainer.api_endpoint, None)
+                trainer.api_endpoint = api_endpoint
+                trainer.save()
 
-            if profile_response is None or not profile_response.payload:
-                raise Exception('Could not get profile')
+                profile_response = retrying_get_profile(trainer.login_type, trainer.access_token, trainer.api_endpoint, None)
 
-            print '[+] Login successful'
+                if profile_response is None or not profile_response.payload:
+                    raise Exception('Could not get profile')
 
-            payload = profile_response.payload[0]
-            profile = pokemon_pb2.ResponseEnvelop.ProfilePayload()
-            profile.ParseFromString(payload)
-            print '[+] Username: {}'.format(profile.profile.username)
+                print '[+] Login successful'
 
-            creation_time = datetime.fromtimestamp(int(profile.profile.creation_time) / 1000)
-            print '[+] You started playing Pokemon Go on: {}'.format(creation_time.strftime('%Y-%m-%d %H:%M:%S'))
+                payload = profile_response.payload[0]
+                profile = pokemon_pb2.ResponseEnvelop.ProfilePayload()
+                profile.ParseFromString(payload)
+                print '[+] Username: {}'.format(profile.profile.username)
 
-            for curr in profile.profile.currency:
-                print '[+] {}: {}'.format(curr.type, curr.amount)
-            return profile_response
+                creation_time = datetime.fromtimestamp(int(profile.profile.creation_time) / 1000)
+                print '[+] You started playing Pokemon Go on: {}'.format(creation_time.strftime('%Y-%m-%d %H:%M:%S'))
+
+                for curr in profile.profile.currency:
+                    print '[+] {}: {}'.format(curr.type, curr.amount)
+                return profile_response
     except ObjectDoesNotExist:
         print "We couldn't find your Trainer credentials for PokemonGoGo"        
     else:
@@ -71,7 +76,7 @@ def search_grids(scan, profile_response):
         # Scan location math
         if -steplimit2 / 2 < x <= steplimit2 / 2 and -steplimit2 / 2 < y <= steplimit2 / 2:
             current_latitude = x * 0.0025 + origin_lat
-            current_longitude = x * 0.0025 + origin_lon
+            current_longitude = y * 0.0025 + origin_lon
             set_location_coords(current_latitude, current_longitude, 0)
         if x == y or x < 0 and x == -y or x > 0 and x == 1 - y:
             (dx, dy) = (-dy, dx)
@@ -79,11 +84,12 @@ def search_grids(scan, profile_response):
         (x, y) = (x + dx, y + dy)
 
         cutoff = False
+        print('Checking for grid at location {} {}'.format(current_latitude, current_longitude))
         try:
             grid = Grid.objects.get(latitude = current_latitude, longitude = current_longitude)
-            print('Grid exists: {}'.format(grid.id))
-            print('Last scanned at: {}'.format(grid.last_scanned_at))
-            print('Cutoff time: {}'.format(cutoff_time))
+            # print('Grid exists: {}'.format(grid.id))
+            # print('Last scanned at: {}'.format(grid.last_scanned_at))
+            # print('Cutoff time: {}'.format(cutoff_time))
             if grid.last_scanned_at > cutoff_time:
                 cutoff = True
         except ObjectDoesNotExist:
@@ -129,23 +135,24 @@ def search_grids(scan, profile_response):
                 pokename = pokemonsJSON[pokeid]
                 spawn_point_id = poke.SpawnPointId
                 
-                print pokename
+                print "Found a {}".format(pokename)
                 try:
                     pokemon = Pokemon.objects.get(pokedex_id = poke.pokemon.PokemonId)
                 except ObjectDoesNotExist:
                     pokemon = Pokemon(pokedex_id = poke.pokemon.PokemonId, name = pokename)
                     pokemon.save()
-                print pokemon.pokedex_id
-
-                print spawn_point_id
+                # print pokemon.pokedex_id
+                # print spawn_point_id
                 expires_at = datetime.fromtimestamp(disappear_timestamp, timezone.utc)
                 try:
-                    sighting = Sighting.objects.get(spawn_point_id = spawn_point_id, pokemon = pokemon, expires_at = expires_at )
+                    sighting = Sighting.objects.get(spawn_point_id = spawn_point_id )
+                    # print "Sighting already exists: {}".format(spawn_point_id, pokemon = pokemon, expires_at = expires_at)
+                    # sighting = Sighting.objects.get(spawn_point_id = spawn_point_id, pokemon = pokemon, expires_at = expires_at )
                 except ObjectDoesNotExist:
-                    print "Try creating a new sighting"
+                    # print "Try creating a new sighting"
                     sighting = Sighting(spawn_point_id = spawn_point_id, pokemon = pokemon, latitude = poke.Latitude, longitude = poke.Longitude, expires_at = expires_at )
                     sighting.save()
-                print sighting.id
+                # print sighting.id
             count += 1;
             if count >= 10:
                 break
