@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+    <html>
+    <head>
+            <meta charset="utf-8">
+            <meta http-equiv="X-UA-Compatible" content="IE=edge">
+            <meta name="viewport" content="width=device-width, initial-scale=1">
+            <title>Flask Google Maps Full Map Example</title>
+    </head>
+    <body>
+        <div id='map-canvas' style="height:500px;width:100%;"></div>
+        <div>
+          <div>
+          {% if login_status == True %}
+              It looks like you are logged in.
+          {% else%}
+              It looks like you are NOT logged in. Refresh the page or try and change your credentials.
+          {% endif %}
+          </div>
+          <div>
+          {% if login_status == True %}
+              Your location is as follows {{ trainer.latitude }}, {{ trainer.longitude }}, access_token: {{ trainer.access_token }}
+          {% else%}
+              It looks like you are NOT logged in. Refresh the page or try and change your credentials.
+          {% endif %}
+          </div>
+          <div>
+            <a href="/tracker/scan/?step=6" target="_blank">Scan for more pokemon.</a>
+          </div>            
+        </div>
+    </body>
+    <script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?key=AIzaSyD-OV7qTajdGwtXQnJtSiSKmU6HwI2O2os"></script>
+    <script type="text/javascript">
+
+        var markers = [];
+        var marker = [];
+        {% for mark in pokeMarkers %}
+            var location_marker = {
+              latitude: {{mark.lat}},
+              longitude: {{mark.lng}},
+              content: "{{mark.infobox|safe}}",
+              icon: "{{mark.icon|safe}}"
+            }
+            markers.push(location_marker);
+
+        {% endfor %}    
+
+      function init() {
+        var myLatlng = new google.maps.LatLng({{origin_lat}}, {{origin_lon}});
+
+        // Basic options for a simple Google Map
+        // For more options see: https://developers.google.com/maps/documentation/javascript/reference#MapOptions
+        var mapOptions = {
+          // How zoomed in you want the map to start at (always required)
+          zoom: 6,
+          // Disable scrollwheel zooming on the map                   
+          center: myLatlng,
+          scrollwheel: false,                    
+          // How you would like to style the map. 
+          // This is where you would paste any style. For example paste a style found on Snazzy Maps. 
+          styles: [{'featureType':'water','stylers':[{'visibility':'on'},{'color':'#428BCA'}]},{'featureType':'landscape','stylers':[{'color':'#f2e5d4'}]},{'featureType':'road.highway','elementType':'geometry','stylers':[{'color':'#c5c6c6'}]},{'featureType':'road.arterial','elementType':'geometry','stylers':[{'color':'#e4d7c6'}]},{'featureType':'road.local','elementType':'geometry','stylers':[{'color':'#fbfaf7'}]},{'featureType':'poi.park','elementType':'geometry','stylers':[{'color':'#c5dac6'}]},{'featureType':'administrative','stylers':[{'visibility':'on'},{'lightness':33}]},{'featureType':'road'},{'featureType':'poi.park','elementType':'labels','stylers':[{'visibility':'on'},{'lightness':20}]},{},{'featureType':'road','stylers':[{'lightness':20}]}]
+        };
+
+        // Get the HTML DOM element that will contain your map 
+        // We are using a div with id="map" seen up in the <body>
+        var mapElement = document.getElementById('map-canvas');
+
+        // Create the Google Map using out element and options defined above
+        map = new google.maps.Map(mapElement, mapOptions);
+
+        var infowindow =  new google.maps.InfoWindow({
+          content: ''
+        });
+
+        var bounds = new google.maps.LatLngBounds();
+        // bounds.extend(myLatlng);
+        // map.fitBounds(bounds); 
+
+        for (index = 0; index < markers.length; ++index) {
+          var locationLatlng = new google.maps.LatLng(markers[index].latitude, markers[index].longitude);
+          bounds.extend(locationLatlng);
+          map.fitBounds(bounds);
+
+
+          marker_icon = 'image.png';
+          marker_z_index = 100;
+
+          // Put a marker at the center of the map
+          marker[index] = new google.maps.Marker({
+            position: locationLatlng,
+            map: map,
+            title: markers[index].title,
+            icon: markers[index].icon,
+            zIndex: marker_z_index 
+          });
+
+          (function(index) {
+            marker[index].addListener('click', function() { 
+              infowindow.setContent(markers[index].content); 
+              infowindow.open(map, marker[index]); 
+            });
+            // marker[index].addListener('mouseout', function() {
+            //     infowindow.close();
+            // });        
+          }(index));
+        }
+        // Don't zoom in too far on only one marker
+        if (bounds.getNorthEast().equals(bounds.getSouthWest())) {
+           var extendPoint1 = new google.maps.LatLng(bounds.getNorthEast().lat() + 0.02, bounds.getNorthEast().lng() + 0.02);
+           var extendPoint2 = new google.maps.LatLng(bounds.getNorthEast().lat() - 0.02, bounds.getNorthEast().lng() - 0.02);
+           bounds.extend(extendPoint1);
+           bounds.extend(extendPoint2);
+        }
+
+        map.fitBounds(bounds);      
+      }        
+
+      google.maps.event.addDomListener(window, 'load', init());
+    </script>
+</html>
